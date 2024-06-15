@@ -1,47 +1,84 @@
-#!/bin/bash
+#!/usr/bin/env python
+from sys import argv
 
-# a       b       c       d
-# |.......|.......|.......|.......|.......
-# |.....|.....|.....|.....|.....|.....|.....|.....
-# Y     W     J     j     Z     A     =     =
-# 
-# .       a       b       c       d
-# |xxxxxxx|.......|.......|.......|.......
-# |xxxxx|xxxxx|.....|.....|.....|.....|.....|.....
-# L     m     F     i     Y     2     Q     =
-# 
-# .       .       a       b       c       d
-# |xxxxxxx|xxxxxxx|.......|.......|.......|.......
-# |xxxxx|xxxxx|xxxxx|.....|.....|.....|.....|.....
-# L     i     5     h     Y     m     N     k
-# 
-# .       .       .       a       b       c       d
-# |xxxxxxx|xxxxxxx|xxxxxxx|.......|.......|.......|.......
-# |xxxxx|xxxxx|xxxxx|xxxxx|.....|.....|.....|.....|.....|.....|.....|.....
-# L     i     4     u     Y     W     J     j     Z     A     =     =
+def target_char(c):
+	if c < 26:
+		return chr(ord('A') + c)
+	if c < 52:
+		return chr(ord('a') + c - 26)
+	if c < 62:
+		return chr(ord('0') + c - 52)
+	if c == 62: return '+'
+	if c == 63: return '/'
 
-# a       b       c
-# |.......|.......|.......
-# |.....|.....|.....|.....
-# Y     W     J     j
-# 
-# a       b       c       d
-# |.......|.......|.......|.......|xxxxxxx|xxxxxxx
-# |.....|.....|.....|.....|.....|xxxxx|xxxxx|xxxxx
-# Y     W     J     j     Z     A     =     =
-# 
-# a       b       c       d       e
-# |.......|.......|.......|.......|.......|xxxxxxx
-# |.....|.....|.....|.....|.....|.....|xxxxx|xxxxx
-# Y     W     J     j     Z     G     U     =
-# 
-# a       b       c       d       e       f
-# |.......|.......|.......|.......|.......|.......
-# |.....|.....|.....|.....|.....|.....|.....|.....
-# Y     W     J     j     Z     G     V     m
+'''
+# test
+import string as S
+assert ''.join(target_char(i) for i in range(64)) == S.ascii_uppercase + S.ascii_lowercase + S.digits + '+/'
+'''
 
-{
-	echo -n "$1" | base64 
-	echo -n ".$1" | base64 | cut -c3-
-	echo -n "..$1" | base64  | cut -c4-
-} | sed -re 's/.==?$//'
+chunks = []
+for i in argv[1].encode('utf-8'):
+	chunks.extend([
+		(i&0b11000000)>>6,
+		(i&0b110000)>>4,
+		(i&0b1100)>>2,
+		i&0b11,
+	])
+
+def chunks_to_chars(chunks):
+	'''
+	[0b11, 0b10, 0b01] → 0b111001
+	[0b11, 0b10] → [0b11, 0b10, None] → 0b1110_00, 0b1110_01, ...
+	[None, 0b10, 0b01] → 0b00_1001, 0b01_1001, ...
+	'''
+	while len(chunks) < 3:
+		chunks.append(None)
+
+	xs, ys, zs = chunks
+	xs = list(range(4)) if xs is None else [xs]
+	ys = list(range(4)) if ys is None else [ys]
+	zs = list(range(4)) if zs is None else [zs]
+	for x in xs:
+		for y in ys:
+			for z in zs:
+				yield (x<<4) | (y<<2) | z
+
+# encoding starting at the beginning of 3-byte group
+chunks0 = chunks[:]
+encoded = []
+while chunks0:
+	char, chunks0 = chunks0[:3], chunks0[3:]
+	target_chars = [target_char(i) for i in chunks_to_chars(char)]
+	if len(target_chars) == 1:
+		encoded.append(target_chars[0])
+	else:
+		encoded.append(f'[{"".join(target_chars)}]')
+
+print(''.join(encoded), end='|')
+
+# starting in the middle of the group
+chunks1 = [None] + chunks[:]
+encoded = []
+while chunks1:
+	char, chunks1 = chunks1[:3], chunks1[3:]
+	target_chars = [target_char(i) for i in chunks_to_chars(char)]
+	if len(target_chars) == 1:
+		encoded.append(target_chars[0])
+	else:
+		encoded.append(f'[{"".join(target_chars)}]')
+
+print(''.join(encoded), end='|')
+
+# starting at the end of the group
+chunks2 = [None, None] + chunks[:]
+encoded = []
+while chunks2:
+	char, chunks2 = chunks2[:3], chunks2[3:]
+	target_chars = [target_char(i) for i in chunks_to_chars(char)]
+	if len(target_chars) == 1:
+		encoded.append(target_chars[0])
+	else:
+		encoded.append(f'[{"".join(target_chars)}]')
+
+print(''.join(encoded))
