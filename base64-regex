@@ -44,41 +44,21 @@ def chunks_to_chars(chunks):
 			for z in zs:
 				yield (x<<4) | (y<<2) | z
 
-# encoding starting at the beginning of 3-byte group
-chunks0 = chunks[:]
-encoded = []
-while chunks0:
-	char, chunks0 = chunks0[:3], chunks0[3:]
-	target_chars = [target_char(i) for i in chunks_to_chars(char)]
-	if len(target_chars) == 1:
-		encoded.append(target_chars[0])
-	else:
-		encoded.append(f'[{"".join(target_chars)}]')
+regex = []
+# encoding starting at different positions
+for chunks_off in [
+	chunks[:],
+	[None] + chunks[:],
+	[None, None] + chunks[:],
+]:
+	encoded = []
+	while chunks_off:
+		char, chunks_off = chunks_off[:3], chunks_off[3:]
+		target_chars = [target_char(i) for i in chunks_to_chars(char)]
+		if len(target_chars) == 1:
+			encoded.append(target_chars[0])
+		else:
+			encoded.append(f'[{"".join(target_chars)}]')
+	regex.append(''.join(encoded))
 
-print(''.join(encoded), end='|')
-
-# starting in the middle of the group
-chunks1 = [None] + chunks[:]
-encoded = []
-while chunks1:
-	char, chunks1 = chunks1[:3], chunks1[3:]
-	target_chars = [target_char(i) for i in chunks_to_chars(char)]
-	if len(target_chars) == 1:
-		encoded.append(target_chars[0])
-	else:
-		encoded.append(f'[{"".join(target_chars)}]')
-
-print(''.join(encoded), end='|')
-
-# starting at the end of the group
-chunks2 = [None, None] + chunks[:]
-encoded = []
-while chunks2:
-	char, chunks2 = chunks2[:3], chunks2[3:]
-	target_chars = [target_char(i) for i in chunks_to_chars(char)]
-	if len(target_chars) == 1:
-		encoded.append(target_chars[0])
-	else:
-		encoded.append(f'[{"".join(target_chars)}]')
-
-print(''.join(encoded))
+print('|'.join(regex))
