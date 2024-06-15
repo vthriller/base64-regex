@@ -67,7 +67,11 @@ def chunks_to_chars(chunks):
 		for y in ys:
 			for z in zs:
 				variants.append(target_char((x<<4) | (y<<2) | z))
-	return variants[0] if len(variants) == 1 else f'[{"".join(variants)}]'
+	if len(variants) == 1:
+		v = variants[0]
+		return '\\+' if v == '+' else v
+	else:
+		return f'[{"".join(variants)}]'
 
 regex = []
 # encoding starting at different positions
